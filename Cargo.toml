@@ -10,5 +10,4 @@ gl_generator = "0.10"
 [dependencies]
 csv = "1.1"
 glutin = "0.19"
-orbclient = "0.3"
 serde = { version = "1.0", features = ["derive"] }

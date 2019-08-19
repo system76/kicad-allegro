@@ -76,7 +76,7 @@ fn main() -> io::Result<()> {
     }
 
     let mut events_loop = glutin::EventsLoop::new();
-    let window = glutin::WindowBuilder::new().with_title("A fantastic window!");
+    let window = glutin::WindowBuilder::new().with_title("KiCad Allegro");
     let context = glutin::ContextBuilder::new();
     let gl_window = glutin::GlWindow::new(window, context, &events_loop).unwrap();
 
@@ -93,6 +93,7 @@ fn main() -> io::Result<()> {
 
     let mut w = 0.0;
     let mut h = 0.0;
+    let mut keys = HashSet::new();
     let mut mouse_x = 0.0;
     let mut mouse_y = 0.0;
     let mut dragging_opt = None;
@@ -108,10 +109,16 @@ fn main() -> io::Result<()> {
                         mouse_y = - (position.y / (h / 2.0) - 1.0);
                     },
                     glutin::WindowEvent::KeyboardInput { input, .. } => {
-                        if input.state == glutin::ElementState::Pressed {
-                            if input.virtual_keycode == Some(glutin::VirtualKeyCode::R) {
-                                camera.p = Vec2::new(0.0, 0.0);
-                                camera.scale = 1.0 / 128.0;
+                        if let Some(virtual_keycode) = input.virtual_keycode {
+                            if input.state == glutin::ElementState::Pressed {
+                                keys.insert(virtual_keycode);
+
+                                if virtual_keycode == glutin::VirtualKeyCode::R {
+                                    camera.p = Vec2::new(0.0, 0.0);
+                                    camera.scale = 1.0 / 128.0;
+                                }
+                            } else {
+                                keys.remove(&virtual_keycode);
                             }
                         }
                     },
@@ -127,13 +134,13 @@ fn main() -> io::Result<()> {
                             glutin::MouseScrollDelta::LineDelta(_x, y) => (y as f64) * 64.0,
                             glutin::MouseScrollDelta::PixelDelta(position) => position.y,
                         };
-                        println!("Scroll {} at {}, {}", dy, mouse_x, mouse_y);
                         let target = camera.translate(mouse_x, mouse_y);
                         camera.scale *= 1.0 + dy / 144.0;
                         camera.target(mouse_x, mouse_y, target);
                     },
                     glutin::WindowEvent::CloseRequested => running = false,
                     glutin::WindowEvent::Resized(logical_size) => {
+                        println!("Resized to {}, {}", logical_size.width, logical_size.height);
                         w = logical_size.width;
                         h = logical_size.height;
                         let dpi_factor = gl_window.get_hidpi_factor();
@@ -144,6 +151,30 @@ fn main() -> io::Result<()> {
                 _ => ()
             }
         });
+
+        if keys.contains(&glutin::VirtualKeyCode::W) {
+            camera.p.y += 10.0;
+        }
+
+        if keys.contains(&glutin::VirtualKeyCode::S) {
+            camera.p.y -= 10.0;
+        }
+
+        if keys.contains(&glutin::VirtualKeyCode::A) {
+            camera.p.x -= 10.0;
+        }
+
+        if keys.contains(&glutin::VirtualKeyCode::D) {
+            camera.p.x += 10.0;
+        }
+
+        if keys.contains(&glutin::VirtualKeyCode::Q) {
+            camera.scale *= 1.0 - 10.0 / 144.0;
+        }
+
+        if keys.contains(&glutin::VirtualKeyCode::E) {
+            camera.scale *= 1.0 + 10.0 / 144.0;
+        }
 
         if let Some(dragging) = dragging_opt {
             camera.target(mouse_x, mouse_y, dragging);
@@ -157,114 +188,6 @@ fn main() -> io::Result<()> {
         gl.draw_frame([0.0, 0.0, 0.0, 1.0], &triangles);
         let _ = gl_window.swap_buffers();
     }
-
-
-    /*
-    let mut window = Window::new_flags(
-        -1, -1,
-        1024, 768,
-        "kicad-allegro",
-        &[WindowFlag::Async, WindowFlag::Resizable]
-    ).ok_or(io::Error::new(
-        io::ErrorKind::Other,
-        "failed to open orbclient window"
-    ))?;
-
-    let mut camera = Camera {
-        p: Vec2::new(0.0, 0.0),
-        scale: 1.0,
-    };
-    let mut dragging_opt = None;
-    let mut last_button = ButtonEvent {
-        left: false,
-        middle: false,
-        right: false
-    };
-    let mut last_mouse = MouseEvent {
-        x: 0,
-        y: 0,
-    };
-    let mut keys = HashSet::with_capacity(256);
-    'running: loop {
-        window.set(Color::rgb(0x00, 0x00, 0x00));
-        for sym_record in sym_records.iter() {
-            sym_record.draw(&mut window, &camera);
-        }
-        // for rte_record in rte_records.iter() {
-        //     rte_record.draw(&mut window, &camera);
-        // }
-        window.sync();
-
-        let mut saw_event = true;
-        while saw_event {
-            saw_event = false;
-            for event in window.events() {
-                saw_event = true;
-                match event.to_option() {
-                    EventOption::Button(button) => {
-                        dragging_opt = if button.left {
-                            Some(camera.translate(&window, last_mouse.x, last_mouse.y))
-                        } else {
-                            None
-                        };
-
-                        last_button = button;
-                    },
-                    EventOption::Key(key) => {
-                        if key.pressed {
-                            keys.insert(key.scancode);
-
-                            if key.scancode == orbclient::K_R {
-                                camera.p = Vec2::new(0.0, 0.0);
-                                camera.scale = 1.0;
-                            }
-                        } else {
-                            keys.remove(&key.scancode);
-                        }
-                    },
-                    EventOption::Mouse(mouse) => {
-                        last_mouse = mouse;
-                    },
-                    EventOption::Scroll(scroll) => {
-                        let target = camera.translate(&window, last_mouse.x, last_mouse.y);
-                        camera.scale *= 1.0 + (scroll.y as f64 * 64.0 / 144.0);
-                        camera.target(&window, last_mouse.x, last_mouse.y, target);
-                    },
-                    EventOption::Quit(_quit) => break 'running,
-                    unknown => println!("{:?}", unknown),
-                }
-            }
-        }
-
-        if keys.contains(&orbclient::K_W) {
-            camera.p.y -= 10.0;
-        }
-
-        if keys.contains(&orbclient::K_S) {
-            camera.p.y += 10.0;
-        }
-
-        if keys.contains(&orbclient::K_A) {
-            camera.p.x -= 10.0;
-        }
-
-        if keys.contains(&orbclient::K_D) {
-            camera.p.x += 10.0;
-        }
-
-        if keys.contains(&orbclient::K_Q) {
-            camera.scale *= 1.0 - 1.0 / 144.0;
-        }
-
-        if keys.contains(&orbclient::K_E) {
-            camera.scale *= 1.0 + 1.0 / 144.0;
-        }
-
-        if let Some(dragging) = dragging_opt {
-            camera.target(&window, last_mouse.x, last_mouse.y, dragging);
-        }
-    }
-    */
 
     Ok(())
 }

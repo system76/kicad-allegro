@@ -15,16 +15,17 @@ use self::vec::Vec2;
 mod vec;
 
 fn main() -> io::Result<()> {
+    let board_path =
+        //"/home/jeremy/Dropbox (System76)/TGL/AEP/BRD/609182_TGL_UP3_LPDDR4x_AEP_BRD_Rev0p9.brd"
+        "/home/jeremy/Dropbox (System76)/TGL/RVP/BRD/609003_TGL_U_DDR4_SODIMM_RVP_BRD_REV0p8.brd"
+    ;
+
     let mut rte_records = Vec::new();
     {
-        let path =
-            //"/home/jeremy/Dropbox (System76)/TGL/AEP/BRD/609182_TGL_UP3_LPDDR4x_AEP_BRD_Rev0p9.brd-rte.txt"
-            "/home/jeremy/Dropbox (System76)/TGL/RVP/BRD/609003_TGL_U_DDR4_SODIMM_RVP_BRD_REV0p8.brd-rte.txt"
-        ;
         let mut reader = csv::ReaderBuilder::new()
             .delimiter(b'!')
             .flexible(true)
-            .from_path(path)?;
+            .from_path(format!("{}-rte.txt", board_path))?;
 
         for record_res in reader.records() {
             let record = record_res?;
@@ -40,14 +41,10 @@ fn main() -> io::Result<()> {
 
     let mut sym_records = Vec::new();
     {
-        let path =
-            //"/home/jeremy/Dropbox (System76)/TGL/AEP/BRD/609182_TGL_UP3_LPDDR4x_AEP_BRD_Rev0p9.brd-rte.txt"
-            "/home/jeremy/Dropbox (System76)/TGL/RVP/BRD/609003_TGL_U_DDR4_SODIMM_RVP_BRD_REV0p8.brd-sym.txt"
-        ;
         let mut reader = csv::ReaderBuilder::new()
             .delimiter(b'!')
             .flexible(true)
-            .from_path(path)?;
+            .from_path(format!("{}-sym.txt", board_path))?;
 
         for record_res in reader.records() {
             let record = //TODO record_res?;
@@ -171,6 +168,9 @@ fn main() -> io::Result<()> {
         }
 
         triangles.clear();
+        for rte_record in rte_records.iter() {
+            rte_record.triangles(&mut triangles, &camera);
+        }
         for sym_record in sym_records.iter() {
             sym_record.triangles(&mut triangles, &camera);
         }

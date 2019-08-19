@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::{Camera, Triangle};
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct RteRecord {
@@ -29,39 +31,46 @@ pub struct RteRecord {
 }
 
 impl RteRecord {
-    // pub fn draw<R: Renderer>(&self, renderer: &mut R, camera: &Camera) {
-    //     let x: f64 = match self.pin_x.parse() {
-    //         Ok(ok) => ok,
-    //         Err(_) => match self.via_x.parse() {
-    //             Ok(ok) => ok,
-    //             Err(_) => return,
-    //         },
-    //     };
-    //
-    //     let y: f64 = match self.pin_y.parse() {
-    //         Ok(ok) => ok,
-    //         Err(_) => match self.via_y.parse() {
-    //             Ok(ok) => ok,
-    //             Err(_) => return,
-    //         },
-    //     };
-    //
-    //     Circle::new(
-    //         Vec2::new(x, y),
-    //         0.1
-    //     ).draw(renderer, Color::rgb(0x7F, 0x7F, 0x7F), camera);
-    //
-    //
-    //     let w = renderer.width() as i32;
-    //     let h = renderer.height() as i32;
-    //     let px = ((x - camera.p.x) * camera.scale).round() as i32 + w / 2;
-    //     let py = ((y - camera.p.y) * camera.scale).round() as i32 + h / 2;
-    //
-    //     let mut px = px - (self.pin_number.len() as i32) * 4;
-    //     let py = py - 8;
-    //     for c in self.pin_number.chars() {
-    //         renderer.char(px, py, c, Color::rgb(0xFF, 0xFF, 0xFF));
-    //         px += 8;
-    //     }
-    // }
+    pub fn triangles(&self, triangles: &mut Vec<Triangle>, camera: &Camera) {
+        let x: f64 = match self.pin_x.parse() {
+            Ok(ok) => ok,
+            Err(_) => match self.via_x.parse() {
+                Ok(ok) => ok,
+                Err(_) => return,
+            },
+        };
+
+        let y: f64 = match self.pin_y.parse() {
+            Ok(ok) => ok,
+            Err(_) => match self.via_y.parse() {
+                Ok(ok) => ok,
+                Err(_) => return,
+            },
+        };
+
+        // b a
+        // c d
+
+        let size = 0.1;
+        let ax = x + size;
+        let ay = y - size;
+        let bx = x - size;
+        let by = y - size;
+        let cx = x - size;
+        let cy = y + size;
+        let dx = x + size;
+        let dy = y + size;
+
+        let color = (1.0, 1.0, 1.0);
+        triangles.push(Triangle {
+            a: camera.vertex(ax, ay, color),
+            b: camera.vertex(bx, by, color),
+            c: camera.vertex(cx, cy, color),
+        });
+        triangles.push(Triangle {
+            a: camera.vertex(ax, ay, color),
+            b: camera.vertex(cx, cy, color),
+            c: camera.vertex(dx, dy, color),
+        });
+    }
 }

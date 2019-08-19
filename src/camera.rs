@@ -1,5 +1,3 @@
-use orbclient::Renderer;
-
 use crate::Vertex;
 use crate::vec::Vec2;
 

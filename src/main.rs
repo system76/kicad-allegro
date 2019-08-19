@@ -1,19 +1,9 @@
 use glutin::GlContext;
-use orbclient::{
-    Color, EventOption, Renderer, Window, WindowFlag,
-    ButtonEvent, MouseEvent,
-};
 use std::io;
 use std::collections::HashSet;
 
 use self::camera::Camera;
 mod camera;
-
-use self::circle::Circle;
-mod circle;
-
-use self::line::Line;
-mod line;
 
 use self::record::{RteRecord, SymRecord};
 mod record;

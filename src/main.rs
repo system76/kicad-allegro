@@ -26,7 +26,7 @@ fn main() -> io::Result<()> {
         let mut reader = csv::ReaderBuilder::new()
             .delimiter(b'!')
             .flexible(true)
-            .from_path(format!("{}-rte.txt", board_path))?;
+            .from_path(format!("{}-rte.csv", board_path))?;
 
         for record_res in reader.records() {
             let record = record_res?;
@@ -45,7 +45,7 @@ fn main() -> io::Result<()> {
         let mut reader = csv::ReaderBuilder::new()
             .delimiter(b'!')
             .flexible(true)
-            .from_path(format!("{}-sym.txt", board_path))?;
+            .from_path(format!("{}-sym.csv", board_path))?;
 
         for record_res in reader.records() {
             let record = //TODO record_res?;
@@ -95,9 +95,19 @@ fn main() -> io::Result<()> {
                 nets.push(rte.net_name.clone());
             }
 
+            let size = 0.4572;
+            let drill = 0.2032;
+
+            let start = "F.Cu";
+            let end = "B.Cu";
+
             tracks.push(format!(
-                "  (via (at {} {}) (size 0.4572) (drill 0.2032) (layers F.Cu B.Cu) (net {}))\n",
+                "  (via (at {} {}) (size {}) (drill {}) (layers {} {}) (net {}))\n",
                 x, -y,
+                size,
+                drill,
+                start,
+                end,
                 i
             ));
         }
@@ -165,8 +175,8 @@ fn main() -> io::Result<()> {
                         i
                     ));
                 },
-                _ => {
-                    println!("TODO: {:?}", sym);
+                other => {
+                    println!("TODO: {}", other);
                 }
             }
         }
@@ -224,31 +234,32 @@ r#"    (31 B.Cu signal)
   )
 
   (setup
-    (last_trace_width 0.25)
-    (trace_clearance 0.2)
-    (zone_clearance 0.508)
-    (zone_45_only no)
-    (trace_min 0.2)
-    (via_size 0.8)
-    (via_drill 0.4)
-    (via_min_size 0.4)
-    (via_min_drill 0.3)
-    (uvia_size 0.3)
-    (uvia_drill 0.1)
-    (uvias_allowed no)
-    (uvia_min_size 0.2)
-    (uvia_min_drill 0.1)
-    (edge_width 0.05)
+    (last_trace_width 0.2)
+    (trace_clearance 0.1)
+    (zone_clearance 0.1)
+    (zone_45_only yes)
+    (trace_min 0.05)
+    (via_size 0.4572)
+    (via_drill 0.2032)
+    (via_min_size 0.4572)
+    (via_min_drill 0.2032)
+    (blind_buried_vias_allowed yes)
+    (uvia_size 0.254)
+    (uvia_drill 0.1016)
+    (uvias_allowed yes)
+    (uvia_min_size 0.254)
+    (uvia_min_drill 0.1016)
+    (edge_width 0.15)
     (segment_width 0.2)
     (pcb_text_width 0.3)
     (pcb_text_size 1.5 1.5)
-    (mod_edge_width 0.12)
+    (mod_edge_width 0.15)
     (mod_text_size 1 1)
     (mod_text_width 0.15)
     (pad_size 1.524 1.524)
     (pad_drill 0.762)
-    (pad_to_mask_clearance 0.051)
-    (solder_mask_min_width 0.25)
+    (pad_to_mask_clearance 0.05)
+    (solder_mask_min_width 0.1)
     (aux_axis_origin 0 0)
     (visible_elements FFFFFF7F)
     (pcbplotparams
@@ -294,12 +305,14 @@ r#"    (31 B.Cu signal)
         file.write_all(
 r#"
   (net_class Default "This is the default net class."
-    (clearance 0.2)
-    (trace_width 0.25)
-    (via_dia 0.8)
-    (via_drill 0.4)
-    (uvia_dia 0.3)
-    (uvia_drill 0.1)
+    (clearance 0.07)
+    (trace_width 0.05)
+    (via_dia 0.4572)
+    (via_drill 0.2032)
+    (uvia_dia 0.254)
+    (uvia_drill 0.1016)
+    (diff_pair_width 0.07)
+    (diff_pair_gap 0.09)
   )
 
 "#

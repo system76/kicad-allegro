@@ -45,10 +45,6 @@ impl SymRecord {
             return;
         }
 
-        if ! self.net_name.starts_with("M_") {
-            return;
-        }
-
         match self.graphic_data_name.as_str() {
             "LINE" => {
                 let x1: f64 = match self.graphic_data_1.parse() {

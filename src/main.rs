@@ -66,13 +66,44 @@ fn main() -> io::Result<()> {
     {
         let mut layers = Vec::new();
         let mut nets = Vec::new();
-        let mut segments = Vec::new();
-        for sym in sym_records.iter() {
-            if sym.class != "ETCH" {
+        let mut tracks = Vec::new();
+
+        for rte in rte_records.iter() {
+            if rte.class != "VIA CLASS" {
                 continue;
             }
 
-            if sym.graphic_data_name != "LINE" {
+            if ! rte.net_name.starts_with("M_") {
+                continue;
+            }
+
+            let x: f64 = match rte.via_x.parse() {
+                Ok(ok) => ok,
+                Err(_) => continue,
+            };
+
+            let y: f64 = match rte.via_y.parse() {
+                Ok(ok) => ok,
+                Err(_) => continue,
+            };
+
+            let i = match nets.iter().position(|x| x == &rte.net_name) {
+                Some(some) => some,
+                None => nets.len(),
+            };
+            if i == nets.len() {
+                nets.push(rte.net_name.clone());
+            }
+
+            tracks.push(format!(
+                "  (via (at {} {}) (size 0.4572) (drill 0.2032) (layers F.Cu B.Cu) (net {}))\n",
+                x, -y,
+                i
+            ));
+        }
+
+        for sym in sym_records.iter() {
+            if sym.class != "ETCH" {
                 continue;
             }
 
@@ -80,57 +111,64 @@ fn main() -> io::Result<()> {
                 continue;
             }
 
-            let x1: f64 = match sym.graphic_data_1.parse() {
-                Ok(ok) => ok,
-                Err(_) => continue,
-            };
+            match sym.graphic_data_name.as_str() {
+                "LINE" => {
+                    let x1: f64 = match sym.graphic_data_1.parse() {
+                        Ok(ok) => ok,
+                        Err(_) => continue,
+                    };
 
-            let y1: f64 = match sym.graphic_data_2.parse() {
-                Ok(ok) => ok,
-                Err(_) => continue,
-            };
+                    let y1: f64 = match sym.graphic_data_2.parse() {
+                        Ok(ok) => ok,
+                        Err(_) => continue,
+                    };
 
-            let x2: f64 = match sym.graphic_data_3.parse() {
-                Ok(ok) => ok,
-                Err(_) => continue,
-            };
+                    let x2: f64 = match sym.graphic_data_3.parse() {
+                        Ok(ok) => ok,
+                        Err(_) => continue,
+                    };
 
-            let y2: f64 = match sym.graphic_data_4.parse() {
-                Ok(ok) => ok,
-                Err(_) => continue,
-            };
+                    let y2: f64 = match sym.graphic_data_4.parse() {
+                        Ok(ok) => ok,
+                        Err(_) => continue,
+                    };
 
-            let t: f64 = sym.graphic_data_5.parse().unwrap_or(0.0);
+                    let t: f64 = sym.graphic_data_5.parse().unwrap_or(0.0);
 
-            let layer = match sym.subclass.as_str() {
-                "TOP" => format!("F.Cu"),
-                "BOTTOM" => format!("B.Cu"),
-                other => {
-                    let layer = format!("{}.Cu", other);
-                    if layers.iter().position(|x| x == &layer).is_none() {
-                        layers.push(layer.clone());
+                    let layer = match sym.subclass.as_str() {
+                        "TOP" => format!("F.Cu"),
+                        "BOTTOM" => format!("B.Cu"),
+                        other => {
+                            let layer = format!("{}.Cu", other);
+                            if layers.iter().position(|x| x == &layer).is_none() {
+                                layers.push(layer.clone());
+                            }
+                            layer
+                        },
+                    };
+
+                    let i = match nets.iter().position(|x| x == &sym.net_name) {
+                        Some(some) => some,
+                        None => nets.len(),
+                    };
+                    if i == nets.len() {
+                        nets.push(sym.net_name.clone());
                     }
-                    layer
+
+                    tracks.push(format!(
+                        //TODO: layer and net
+                        "  (segment (start {} {}) (end {} {}) (width {}) (layer {}) (net {}))\n",
+                        x1, -y1,
+                        x2, -y2,
+                        t,
+                        layer,
+                        i
+                    ));
                 },
-            };
-
-            let i = match nets.iter().position(|x| x == &sym.net_name) {
-                Some(some) => some,
-                None => nets.len(),
-            };
-            if i == nets.len() {
-                nets.push(sym.net_name.clone());
+                _ => {
+                    println!("TODO: {:?}", sym);
+                }
             }
-
-            segments.push(format!(
-                //TODO: layer and net
-                "  (segment (start {} {}) (end {} {}) (width {}) (layer {}) (net {}))\n",
-                x1, -y1,
-                x2, -y2,
-                t,
-                layer,
-                i
-            ));
         }
 
         let mut file = fs::File::create("export.kicad_pcb")?;
@@ -150,7 +188,7 @@ r#"(kicad_pcb (version 20171130) (host pcbnew 5.1.4-e60b266~84~ubuntu19.04.1)
   (layers
     (0 F.Cu signal)
 "#,
-            segments.len(),
+            tracks.len(),
             nets.len(),
         ).as_bytes())?;
 
@@ -267,8 +305,8 @@ r#"
 "#
         .as_bytes())?;
 
-        for segment in segments.iter() {
-            file.write_all(segment.as_bytes())?;
+        for tracks in tracks.iter() {
+            file.write_all(tracks.as_bytes())?;
         }
         file.write_all(b"\n)\n")?;
     }

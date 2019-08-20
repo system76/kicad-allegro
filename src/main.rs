@@ -1,6 +1,7 @@
 use glutin::GlContext;
-use std::io;
+use std::{fs, io};
 use std::collections::HashSet;
+use std::io::Write;
 
 use self::camera::Camera;
 mod camera;
@@ -61,6 +62,218 @@ fn main() -> io::Result<()> {
             }
         }
     }
+
+    {
+        let mut layers = Vec::new();
+        let mut nets = Vec::new();
+        let mut segments = Vec::new();
+        for sym in sym_records.iter() {
+            if sym.class != "ETCH" {
+                continue;
+            }
+
+            if sym.graphic_data_name != "LINE" {
+                continue;
+            }
+
+            if ! sym.net_name.starts_with("M_") {
+                continue;
+            }
+
+            let x1: f64 = match sym.graphic_data_1.parse() {
+                Ok(ok) => ok,
+                Err(_) => continue,
+            };
+
+            let y1: f64 = match sym.graphic_data_2.parse() {
+                Ok(ok) => ok,
+                Err(_) => continue,
+            };
+
+            let x2: f64 = match sym.graphic_data_3.parse() {
+                Ok(ok) => ok,
+                Err(_) => continue,
+            };
+
+            let y2: f64 = match sym.graphic_data_4.parse() {
+                Ok(ok) => ok,
+                Err(_) => continue,
+            };
+
+            let t: f64 = sym.graphic_data_5.parse().unwrap_or(0.0);
+
+            let layer = match sym.subclass.as_str() {
+                "TOP" => format!("F.Cu"),
+                "BOTTOM" => format!("B.Cu"),
+                other => {
+                    let layer = format!("{}.Cu", other);
+                    if layers.iter().position(|x| x == &layer).is_none() {
+                        layers.push(layer.clone());
+                    }
+                    layer
+                },
+            };
+
+            let i = match nets.iter().position(|x| x == &sym.net_name) {
+                Some(some) => some,
+                None => nets.len(),
+            };
+            if i == nets.len() {
+                nets.push(sym.net_name.clone());
+            }
+
+            segments.push(format!(
+                //TODO: layer and net
+                "  (segment (start {} {}) (end {} {}) (width {}) (layer {}) (net {}))\n",
+                x1, -y1,
+                x2, -y2,
+                t,
+                layer,
+                i
+            ));
+        }
+
+        let mut file = fs::File::create("export.kicad_pcb")?;
+        file.write_all(format!(
+r#"(kicad_pcb (version 20171130) (host pcbnew 5.1.4-e60b266~84~ubuntu19.04.1)
+
+  (general
+    (thickness 1.6)
+    (drawings 0)
+    (tracks {})
+    (zones 0)
+    (modules 0)
+    (nets {})
+  )
+
+  (page A4)
+  (layers
+    (0 F.Cu signal)
+"#,
+            segments.len(),
+            nets.len(),
+        ).as_bytes())?;
+
+        layers.sort_by(|a, b| natord::compare(&a, &b));
+        for (i, layer) in layers.iter().enumerate() {
+            file.write_all(format!(
+                "    ({} {} signal)",
+                i + 1,
+                layer
+            ).as_bytes())?;
+        }
+
+        file.write_all(
+r#"    (31 B.Cu signal)
+    (32 B.Adhes user)
+    (33 F.Adhes user)
+    (34 B.Paste user)
+    (35 F.Paste user)
+    (36 B.SilkS user)
+    (37 F.SilkS user)
+    (38 B.Mask user)
+    (39 F.Mask user)
+    (40 Dwgs.User user)
+    (41 Cmts.User user)
+    (42 Eco1.User user)
+    (43 Eco2.User user)
+    (44 Edge.Cuts user)
+    (45 Margin user)
+    (46 B.CrtYd user)
+    (47 F.CrtYd user)
+    (48 B.Fab user)
+    (49 F.Fab user)
+  )
+
+  (setup
+    (last_trace_width 0.25)
+    (trace_clearance 0.2)
+    (zone_clearance 0.508)
+    (zone_45_only no)
+    (trace_min 0.2)
+    (via_size 0.8)
+    (via_drill 0.4)
+    (via_min_size 0.4)
+    (via_min_drill 0.3)
+    (uvia_size 0.3)
+    (uvia_drill 0.1)
+    (uvias_allowed no)
+    (uvia_min_size 0.2)
+    (uvia_min_drill 0.1)
+    (edge_width 0.05)
+    (segment_width 0.2)
+    (pcb_text_width 0.3)
+    (pcb_text_size 1.5 1.5)
+    (mod_edge_width 0.12)
+    (mod_text_size 1 1)
+    (mod_text_width 0.15)
+    (pad_size 1.524 1.524)
+    (pad_drill 0.762)
+    (pad_to_mask_clearance 0.051)
+    (solder_mask_min_width 0.25)
+    (aux_axis_origin 0 0)
+    (visible_elements FFFFFF7F)
+    (pcbplotparams
+      (layerselection 0x010fc_ffffffff)
+      (usegerberextensions false)
+      (usegerberattributes false)
+      (usegerberadvancedattributes false)
+      (creategerberjobfile false)
+      (excludeedgelayer true)
+      (linewidth 0.100000)
+      (plotframeref false)
+      (viasonmask false)
+      (mode 1)
+      (useauxorigin false)
+      (hpglpennumber 1)
+      (hpglpenspeed 20)
+      (hpglpendiameter 15.000000)
+      (psnegative false)
+      (psa4output false)
+      (plotreference true)
+      (plotvalue true)
+      (plotinvisibletext false)
+      (padsonsilk false)
+      (subtractmaskfromsilk false)
+      (outputformat 1)
+      (mirror false)
+      (drillshape 1)
+      (scaleselection 1)
+      (outputdirectory ""))
+  )
+
+"#
+        .as_bytes())?;
+
+        for (i, net) in nets.iter().enumerate() {
+            file.write_all(format!(
+                "  (net {} \"{}\")\n",
+                i,
+                net,
+            ).as_bytes())?;
+        }
+
+        file.write_all(
+r#"
+  (net_class Default "This is the default net class."
+    (clearance 0.2)
+    (trace_width 0.25)
+    (via_dia 0.8)
+    (via_drill 0.4)
+    (uvia_dia 0.3)
+    (uvia_drill 0.1)
+  )
+
+"#
+        .as_bytes())?;
+
+        for segment in segments.iter() {
+            file.write_all(segment.as_bytes())?;
+        }
+        file.write_all(b"\n)\n")?;
+    }
+
+    return Ok(());
 
     let mut events_loop = glutin::EventsLoop::new();
     let window = glutin::WindowBuilder::new().with_title("KiCad Allegro");

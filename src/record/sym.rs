@@ -6,42 +6,46 @@ use crate::{Camera, Triangle};
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct SymRecord {
-    record_kind: String,
-    sym_type: String,
-    sym_name: String,
-    refdes_sort: String,
-    refdes: String,
-    sym_x: String,
-    sym_y: String,
-    sym_rotate: String,
-    sym_mirror: String,
-    net_name_sort: String,
-    net_name: String,
-    class: String,
-    subclass: String,
-    record_tag: String,
-    graphic_data_name: String,
-    graphic_data_number: String,
-    graphic_data_1: String,
-    graphic_data_2: String,
-    graphic_data_3: String,
-    graphic_data_4: String,
-    graphic_data_5: String,
-    graphic_data_6: String,
-    graphic_data_7: String,
-    graphic_data_8: String,
-    graphic_data_9: String,
-    graphic_data_10: String,
-    comp_device_type: String,
-    comp_package: String,
-    comp_part_number: String,
-    comp_value: String,
-    value: String,
+    pub record_kind: String,
+    pub sym_type: String,
+    pub sym_name: String,
+    pub refdes_sort: String,
+    pub refdes: String,
+    pub sym_x: String,
+    pub sym_y: String,
+    pub sym_rotate: String,
+    pub sym_mirror: String,
+    pub net_name_sort: String,
+    pub net_name: String,
+    pub class: String,
+    pub subclass: String,
+    pub record_tag: String,
+    pub graphic_data_name: String,
+    pub graphic_data_number: String,
+    pub graphic_data_1: String,
+    pub graphic_data_2: String,
+    pub graphic_data_3: String,
+    pub graphic_data_4: String,
+    pub graphic_data_5: String,
+    pub graphic_data_6: String,
+    pub graphic_data_7: String,
+    pub graphic_data_8: String,
+    pub graphic_data_9: String,
+    pub graphic_data_10: String,
+    pub comp_device_type: String,
+    pub comp_package: String,
+    pub comp_part_number: String,
+    pub comp_value: String,
+    pub value: String,
 }
 
 impl SymRecord {
     pub fn triangles(&self, triangles: &mut Vec<Triangle>, camera: &Camera) {
         if self.class != "ETCH" {
+            return;
+        }
+
+        if ! self.net_name.starts_with("M_") {
             return;
         }
 
@@ -67,9 +71,9 @@ impl SymRecord {
                     Err(_) => return,
                 };
 
-                let t: f64 = self.graphic_data_5.parse().unwrap_or(0.0);
+                let w: f64 = self.graphic_data_5.parse().unwrap_or(0.0);
 
-                let thickness = t.max(0.00001);
+                let thickness = w.max(0.00001) / 2.0;
                 let angle = (y2 - y1).atan2(x2 - x1);
                 let ax = x1 + thickness*(angle+PI/2.0).cos();
                 let ay = y1 + thickness*(angle+PI/2.0).sin();

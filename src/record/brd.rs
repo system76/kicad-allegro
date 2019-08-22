@@ -3,16 +3,16 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub struct BrdRecord {
-    record_kind: String,
-    layer_sort: String,
-    layer_subclass: String,
-    layer_artwork: String,
-    layer_use: String,
-    layer_conductor: String,
-    layer_dielectric_constant: String,
-    layer_electrical_conductivity: String,
-    layer_material: String,
-    layer_shield_layer: String,
-    layer_thermal_conductivity: String,
-    layer_thickness: String,
+    pub record_kind: String,
+    pub layer_sort: String,
+    pub layer_subclass: String,
+    pub layer_artwork: String,
+    pub layer_use: String,
+    pub layer_conductor: String,
+    pub layer_dielectric_constant: String,
+    pub layer_electrical_conductivity: String,
+    pub layer_material: String,
+    pub layer_shield_layer: String,
+    pub layer_thermal_conductivity: String,
+    pub layer_thickness: String,
 }

@@ -6,7 +6,7 @@ use std::io::Write;
 use self::camera::Camera;
 mod camera;
 
-use self::record::{RteRecord, SymRecord};
+use self::record::{BrdRecord, RteRecord, SymRecord};
 mod record;
 
 pub use self::support::{Triangle, Vertex};
@@ -20,6 +20,25 @@ fn main() -> io::Result<()> {
         //"/home/jeremy/Dropbox (System76)/TGL/AEP/BRD/609182_TGL_UP3_LPDDR4x_AEP_BRD_Rev0p9.brd"
         "/home/jeremy/Dropbox (System76)/TGL/RVP/BRD/609003_TGL_U_DDR4_SODIMM_RVP_BRD_REV0p8.brd"
     ;
+
+    let mut brd_records = Vec::new();
+    {
+        let mut reader = csv::ReaderBuilder::new()
+            .delimiter(b'!')
+            .flexible(true)
+            .from_path(format!("{}-brd.csv", board_path))?;
+
+        for record_res in reader.records() {
+            let record = record_res?;
+            if record.get(0) == Some("S") {
+                let brd_record: BrdRecord = record.deserialize(None)?;
+                //println!("{:?}", brd_record);
+                brd_records.push(brd_record);
+            } else {
+                println!("Unimplemented: {:?}", record);
+            }
+        }
+    }
 
     let mut rte_records = Vec::new();
     {
@@ -67,6 +86,18 @@ fn main() -> io::Result<()> {
         let mut layers = Vec::new();
         let mut nets = Vec::new();
         let mut tracks = Vec::new();
+
+        for brd in brd_records.iter() {
+            if brd.layer_conductor != "YES" {
+                continue;
+            }
+
+            match brd.layer_subclass.as_str() {
+                "TOP" => (),
+                "BOTTOM" => (),
+                other => layers.push(format!("{}.Cu", other)),
+            }
+        }
 
         for rte in rte_records.iter() {
             if rte.class != "VIA CLASS" {
@@ -148,13 +179,7 @@ fn main() -> io::Result<()> {
                     let layer = match sym.subclass.as_str() {
                         "TOP" => format!("F.Cu"),
                         "BOTTOM" => format!("B.Cu"),
-                        other => {
-                            let layer = format!("{}.Cu", other);
-                            if layers.iter().position(|x| x == &layer).is_none() {
-                                layers.push(layer.clone());
-                            }
-                            layer
-                        },
+                        other => format!("{}.Cu", other),
                     };
 
                     let i = match nets.iter().position(|x| x == &sym.net_name) {
@@ -205,7 +230,7 @@ r#"(kicad_pcb (version 20171130) (host pcbnew 5.1.4-e60b266~84~ubuntu19.04.1)
         layers.sort_by(|a, b| natord::compare(&a, &b));
         for (i, layer) in layers.iter().enumerate() {
             file.write_all(format!(
-                "    ({} {} signal)",
+                "    ({} {} signal)\n",
                 i + 1,
                 layer
             ).as_bytes())?;

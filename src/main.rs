@@ -133,7 +133,7 @@ fn main() -> io::Result<()> {
             let end = "B.Cu";
 
             tracks.push(format!(
-                "  (via (at {} {}) (size {}) (drill {}) (layers {} {}) (net {}))\n",
+                "  (via (at {} {}) (size {}) (drill {}) (layers {} {}) (net {}) (status 40000))\n",
                 x, -y,
                 size,
                 drill,
@@ -191,8 +191,7 @@ fn main() -> io::Result<()> {
                     }
 
                     tracks.push(format!(
-                        //TODO: layer and net
-                        "  (segment (start {} {}) (end {} {}) (width {}) (layer {}) (net {}))\n",
+                        "  (segment (start {} {}) (end {} {}) (width {}) (layer {}) (net {}) (status 40000))\n",
                         x1, -y1,
                         x2, -y2,
                         t,
